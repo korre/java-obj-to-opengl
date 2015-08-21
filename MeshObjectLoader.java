@@ -83,16 +83,16 @@ public class MeshObjectLoader {
                 if (tmp[0].equalsIgnoreCase("f")) {
 
                     String[] ftmp;
-                    long facex;
+                    int facex;
                     int facey;
                     int facez;
 
                     for (int i = 1; i < 4; i++) {
                         ftmp = tmp[i].split("/");
 
-                        facex = Integer.parseInt(ftmp[0]) - 1;
-                        facey = Integer.parseInt(ftmp[1]) - 1;
-                        facez = Integer.parseInt(ftmp[2]) - 1;
+                        facex = faceStringToInt(ftmp[0]) - 1;
+                        facey = faceStringToInt(ftmp[1]) - 1;
+                        facez = faceStringToInt(ftmp[2]) - 1;
 
                         fplist.add(new Face(facex, facey, facez));
                     }
@@ -105,15 +105,15 @@ public class MeshObjectLoader {
                             ftmp = tmp[i].split("/");
 
                             if (i == 1 || i == 3) {
-                                facex = Integer.parseInt(ftmp[0]) - 1;
-                                facey = Integer.parseInt(ftmp[1]) - 1;
-                                facez = Integer.parseInt(ftmp[2]) - 1;
+                                facex = faceStringToInt(ftmp[0]) - 1;
+                                facey = faceStringToInt(ftmp[1]) - 1;
+                                facez = faceStringToInt(ftmp[2]) - 1;
                                 fplist.add(new Face(facex, facey, facez));
                             } else if (i == 2) {
                                 String[] gtmp = tmp[4].split("/");
-                                facex = Integer.parseInt(gtmp[0]) - 1;
-                                facey = Integer.parseInt(gtmp[1]) - 1;
-                                facez = Integer.parseInt(gtmp[2]) - 1;
+                                facex = faceStringToInt(gtmp[0]) - 1;
+                                facey = faceStringToInt(gtmp[1]) - 1;
+                                facez = faceStringToInt(gtmp[2]) - 1;
                                 fplist.add(new Face(facex, facey, facez));
                             }
                         }
@@ -131,29 +131,39 @@ public class MeshObjectLoader {
             }
 
             // Each float takes 4 bytes
-            ByteBuffer vbb = ByteBuffer.allocateDirect(fplist.size() * 4 * 3);
+            int fplistSize = fplist.size();
+            ByteBuffer vbb = ByteBuffer.allocateDirect(fplistSize * 4 * 3);
             vbb.order(ByteOrder.LITTLE_ENDIAN);
             mVertexBuffer = vbb.asFloatBuffer();
 
-            ByteBuffer vtbb = ByteBuffer.allocateDirect(fplist.size() * 4 * 2);
+            ByteBuffer vtbb = ByteBuffer.allocateDirect(fplistSize * 4 * 2);
             vtbb.order(ByteOrder.LITTLE_ENDIAN);
             mTexBuffer = vtbb.asFloatBuffer();
 
-            ByteBuffer nbb = ByteBuffer.allocateDirect(fplist.size() * 4 * 3);
+            ByteBuffer nbb = ByteBuffer.allocateDirect(fplistSize * 4 * 3);
             nbb.order(ByteOrder.LITTLE_ENDIAN);
             mNormBuffer = nbb.asFloatBuffer();
 
-            for (int j = 0; j < fplist.size(); j++) {
-                mVertexBuffer.put(vlist.get((int) (fplist.get(j).fx * 3)));
-                mVertexBuffer.put(vlist.get((int) (fplist.get(j).fx * 3 + 1)));
-                mVertexBuffer.put(vlist.get((int) (fplist.get(j).fx * 3 + 2)));
+            int vlistSize = vlist.size();
+            int nlistSize = nlist.size();
+            int tlistSize = tlist.size();
 
-                mTexBuffer.put(tlist.get(fplist.get(j).fy * 2));
-                mTexBuffer.put(tlist.get((fplist.get(j).fy * 2) + 1));
+            Face face;
 
-                mNormBuffer.put(nlist.get(fplist.get(j).fz * 3));
-                mNormBuffer.put(nlist.get((fplist.get(j).fz * 3) + 1));
-                mNormBuffer.put(nlist.get((fplist.get(j).fz * 3) + 2));
+            for (int j = 0; j < fplistSize; j++) {
+
+                face = fplist.get(j);
+
+                mVertexBuffer.put(vlist.get(fixedIndex(vlistSize, (int) face.fx * 3, numVerts)));
+                mVertexBuffer.put(vlist.get(fixedIndex(vlistSize, (int) (face.fx * 3 + 1), numVerts)));
+                mVertexBuffer.put(vlist.get(fixedIndex(vlistSize, (int) (face.fx * 3 + 2), numVerts)));
+
+                mTexBuffer.put(tlist.get(fixedIndex(tlistSize, face.fy * 2, numTexCoords)));
+                mTexBuffer.put(tlist.get(fixedIndex(tlistSize, face.fy * 2 + 1, numTexCoords)));
+
+                mNormBuffer.put(nlist.get(fixedIndex(nlistSize, face.fz * 3, numNormals)));
+                mNormBuffer.put(nlist.get(fixedIndex(nlistSize, face.fz * 3 + 1, numNormals)));
+                mNormBuffer.put(nlist.get(fixedIndex(nlistSize, face.fz * 3 + 2, numNormals)));
             }
 
             mVertexBuffer.rewind();
@@ -176,6 +186,27 @@ public class MeshObjectLoader {
         }
 
         return null;
+    }
+
+    private static int fixedIndex(int listSize, int index, int total) {
+        if (index >= listSize || index < 0) {
+            return total -1;
+        } else {
+            return index;
+        }
+    }
+
+    private static int faceStringToInt(String number) {
+        int result;
+
+        try {
+            result = Integer.parseInt(number);
+        } catch (NumberFormatException e) {
+            // do nothing at the moment return 0
+            result = 0;
+        }
+
+        return result;
     }
 
     /**
