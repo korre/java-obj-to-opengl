@@ -1,4 +1,4 @@
-package se.furniturebox.vuforia.domain.misc;
+package se.happanero.app;
 
 import android.util.Log;
 
